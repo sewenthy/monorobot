@@ -1,0 +1,28 @@
+{
+    "main_branch_name": "master",
+    "prefix_rules": {
+        "default_channel": "channel-1",
+        "rules": [
+            {
+                "match": [
+                    "documentations/"
+                ],
+                "channel": "general"
+            }
+        ]
+    },
+    "label_rules": {
+        "default_channel": "channel-1",
+        "ignored_users": [
+            "sewen-thy"
+        ],
+        "rules": [
+            {
+                "match": [
+                    "121"
+                ],
+                "channel": "121"
+            }
+        ]
+    }
+}
