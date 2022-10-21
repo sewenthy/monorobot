@@ -46,6 +46,9 @@ Refer [here](https://docs.github.com/en/free-pro-team@latest/developers/webhooks
 ```json
 "label_rules": {
     "default_channel": "default",
+    "ignored_users": [
+        "ignored_user"
+    ],
     "rules": [
         {
             "match": [
@@ -81,6 +84,7 @@ Refer [here](https://docs.github.com/en/free-pro-team@latest/developers/webhooks
 | value | description | default |
 |-|-|-|
 | `default_channel` | default channel to notify when no rules match | no channels notified when no rules match |
+| `ignored_users` | list of users to be ignored on PR comments | no user is ignored |
 | `rules` | list of `label_rule` objects | required field |
 
 ### Label Rule

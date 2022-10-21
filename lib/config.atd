@@ -20,6 +20,7 @@ type prefix_rules = {
 (* This type of rule is used for PR and issue notifications. *)
 type label_rules = {
   ?default_channel: string nullable; (* if none of the rules is matching *)
+  ~ignored_users <ocaml default="[]">: string list; (* list of ignored users *)
   rules: label_rule list;
 }
 

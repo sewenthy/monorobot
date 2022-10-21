@@ -63,7 +63,9 @@ module Action (Github_api : Api.Github) (Slack_api : Api.Slack) = struct
 
   let partition_issue_comment cfg (n : issue_comment_notification) =
     match n.action with
-    | Created -> partition_label cfg n.issue.labels
+    | Created ->
+      if List.exists cfg.label_rules.ignored_users ~f:(String.equal n.sender.login) then []
+      else partition_label cfg n.issue.labels
     | _ -> []
 
   let partition_pr_review cfg (n : pr_review_notification) =
