@@ -63,9 +63,7 @@ module Action (Github_api : Api.Github) (Slack_api : Api.Slack) = struct
 
   let partition_issue_comment cfg (n : issue_comment_notification) =
     match n.action with
-    | Created ->
-      if List.exists cfg.label_rules.ignored_users ~f:(String.equal n.sender.login) then []
-      else partition_label cfg n.issue.labels
+    | Created -> partition_label cfg n.issue.labels
     | _ -> []
 
   let partition_pr_review cfg (n : pr_review_notification) =
@@ -157,28 +155,47 @@ module Action (Github_api : Api.Github) (Slack_api : Api.Slack) = struct
         )
       )
 
-  let generate_notifications (ctx : Context.t) req =
+  let ignore_notifications_from_user cfg req =
+    let sender_login =
+      match req with
+      | Github.Push n -> Some n.sender.login
+      | Pull_request n -> Some n.sender.login
+      | PR_review n -> Some n.sender.login
+      | PR_review_comment n -> Some n.sender.login
+      | Issue n -> Some n.sender.login
+      | Issue_comment n -> Some n.sender.login
+      | Commit_comment n -> Some n.sender.login
+      | _ -> None
+    in
+    match sender_login with
+    | Some sender_login -> List.exists cfg.ignored_users ~f:(String.equal sender_login)
+    | None -> false
+
+  let generate_notifications (ctx : Context.t) (req : Github.t) =
     let repo = Github.repo_of_notification req in
     let cfg = Context.find_repo_config_exn ctx repo.url in
-    match req with
-    | Github.Push n ->
-      partition_push cfg n |> List.map ~f:(fun (channel, n) -> generate_push_notification n channel) |> Lwt.return
-    | Pull_request n -> partition_pr cfg n |> List.map ~f:(generate_pull_request_notification n) |> Lwt.return
-    | PR_review n -> partition_pr_review cfg n |> List.map ~f:(generate_pr_review_notification n) |> Lwt.return
-    | PR_review_comment n ->
-      partition_pr_review_comment cfg n |> List.map ~f:(generate_pr_review_comment_notification n) |> Lwt.return
-    | Issue n -> partition_issue cfg n |> List.map ~f:(generate_issue_notification n) |> Lwt.return
-    | Issue_comment n ->
-      partition_issue_comment cfg n |> List.map ~f:(generate_issue_comment_notification n) |> Lwt.return
-    | Commit_comment n ->
-      let%lwt channels, api_commit = partition_commit_comment ctx n in
-      let notifs = List.map ~f:(generate_commit_comment_notification api_commit n) channels in
-      Lwt.return notifs
-    | Status n ->
-      let%lwt channels = partition_status ctx n in
-      let notifs = List.map ~f:(generate_status_notification cfg n) channels in
-      Lwt.return notifs
-    | _ -> Lwt.return []
+    if ignore_notifications_from_user cfg req then Lwt.return []
+    else (
+      match req with
+      | Github.Push n ->
+        partition_push cfg n |> List.map ~f:(fun (channel, n) -> generate_push_notification n channel) |> Lwt.return
+      | Pull_request n -> partition_pr cfg n |> List.map ~f:(generate_pull_request_notification n) |> Lwt.return
+      | PR_review n -> partition_pr_review cfg n |> List.map ~f:(generate_pr_review_notification n) |> Lwt.return
+      | PR_review_comment n ->
+        partition_pr_review_comment cfg n |> List.map ~f:(generate_pr_review_comment_notification n) |> Lwt.return
+      | Issue n -> partition_issue cfg n |> List.map ~f:(generate_issue_notification n) |> Lwt.return
+      | Issue_comment n ->
+        partition_issue_comment cfg n |> List.map ~f:(generate_issue_comment_notification n) |> Lwt.return
+      | Commit_comment n ->
+        let%lwt channels, api_commit = partition_commit_comment ctx n in
+        let notifs = List.map ~f:(generate_commit_comment_notification api_commit n) channels in
+        Lwt.return notifs
+      | Status n ->
+        let%lwt channels = partition_status ctx n in
+        let notifs = List.map ~f:(generate_status_notification cfg n) channels in
+        Lwt.return notifs
+      | _ -> Lwt.return []
+    )
 
   let send_notifications (ctx : Context.t) notifications =
     let notify (msg : Slack_t.post_message_req) =
