@@ -1,5 +1,8 @@
 {
     "main_branch_name": "master",
+    "ignored_users": [
+        "sewenthy"
+    ],
     "prefix_rules": {
         "default_channel": "channel-1",
         "rules": [
@@ -13,9 +16,6 @@
     },
     "label_rules": {
         "default_channel": "channel-1",
-        "ignored_users": [
-            "sewenthy"
-        ],
         "rules": [
             {
                 "match": [
