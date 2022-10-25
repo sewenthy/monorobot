@@ -1,2 +1,1 @@
-foo
-something else other than foo
+i changed bar
