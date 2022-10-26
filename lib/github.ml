@@ -132,6 +132,7 @@ let gh_link_of_string url_str =
         contents_url = sprintf "%s/contents/{+path}" api_base;
         pulls_url = sprintf "%s/pulls{/number}" api_base;
         issues_url = sprintf "%s/issues{/number}" api_base;
+        compare_url = sprintf "%s/compare{/basehead}" api_base;
       }
     in
     begin

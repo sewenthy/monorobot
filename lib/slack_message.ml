@@ -193,3 +193,7 @@ let populate_commit repository (commit : api_commit) =
     text = Some text;
     fallback = Some fallback;
   }
+
+let populate_compare repository (compare : compare) =
+  let commits_unfurl = List.map compare.commits ~f:(populate_commit repository) in
+  List.find_exn commits_unfurl ~f:(fun _ -> true)

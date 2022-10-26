@@ -13,6 +13,7 @@ type git_user_with_date = {
 }
 
 type commit_hash = string
+
 type compare_branches = string
 
 type commit = {
@@ -26,6 +27,16 @@ type commit = {
   added: string list;
   removed: string list;
   modified: string list;
+}
+
+type file = {
+  sha: commit_hash;
+  filename: string;
+  status: string;
+  additions: int;
+  deletions: int;
+  changes: int;
+  blob_url <ocaml name="url"> : string;
 }
 
 type github_user = {
@@ -53,6 +64,7 @@ type repository = {
   contents_url: string;
   pulls_url: string;
   issues_url: string;
+  compare_url: string;
 }
 
 type commit_pushed_notification = {
@@ -105,6 +117,22 @@ type issue = {
   state: abstract_issue_state;
   ~assignees <ocaml default="[]">: github_user list;
   ~comments <ocaml default="0">: int;
+}
+
+type compare = {
+  url: string;
+  html_url: string;
+  permalink_url: string;
+  diff_url: string;
+  patch_url: string;
+  base_commit: commit;
+  merge_base_commit: commit;
+  status: string;
+  ahead_by: int;
+  behind_by: int;
+  total_commits: int;
+  commits: api_commit list;
+  files: file list;
 }
 
 type pr_action = [
@@ -243,16 +271,6 @@ type status_notification = {
   repository: repository;
   branches: branch list;
   updated_at: string;
-}
-
-type file = {
-  sha: commit_hash;
-  filename: string;
-  status: string;
-  additions: int;
-  deletions: int;
-  changes: int;
-  blob_url <ocaml name="url"> : string;
 }
 
 type api_commit_stats = {
