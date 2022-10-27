@@ -59,6 +59,7 @@ type repository = {
   full_name: string;
   html_url <ocaml name="url"> : string;
   commits_url: string;
+  branches_url: string;
   contents_url: string;
   pulls_url: string;
   issues_url: string;

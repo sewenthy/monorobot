@@ -150,11 +150,11 @@ let populate_commit ?(for_compare = false) repository (commit : api_commit) =
   let title =
     match author with
     | Some author ->
-      sprintf "`<%s|%s>` *%s - <%s|%s>*" url (Slack.git_short_sha_hash sha)
+      sprintf "`<%s|%s>` %s - <%s|%s>" url (Slack.git_short_sha_hash sha)
         (escape_mrkdwn @@ first_line commit.message)
         (escape_mrkdwn author.html_url) (escape_mrkdwn commit.author.name)
     | None ->
-      sprintf "`<%s|%s>` *%s - %s*" url (Slack.git_short_sha_hash sha)
+      sprintf "`<%s|%s>` %s - %s" url (Slack.git_short_sha_hash sha)
         (escape_mrkdwn @@ first_line commit.message)
         (escape_mrkdwn commit.author.name)
   in
@@ -211,7 +211,7 @@ let populate_commit ?(for_compare = false) repository (commit : api_commit) =
     fallback = Some fallback;
   }
 
-let populate_compare repository (compare : compare) =
+let populate_compare repository (compare : compare) basehead =
   let commits_unfurl = List.map compare.commits ~f:(populate_commit ~for_compare:true repository) in
   let commits_unfurl_text =
     List.map commits_unfurl ~f:(fun commit_unfurl ->
@@ -233,7 +233,15 @@ let populate_compare repository (compare : compare) =
     | "" -> ""
     | text -> sprintf "\n\n%s" text
   in
-  let text = sprintf "%d _commits_:\n%s%s" compare.total_commits (String.concat commits_unfurl_text) file_stats in
+  let repo_text =
+    sprintf "<%s|[%s:%s]>" (escape_mrkdwn compare.html_url) (escape_mrkdwn repository.name)
+      (escape_mrkdwn basehead)
+  in
+  let total_commits_text =
+    if compare.total_commits > 1 then sprintf "<%s|%d _commits_>" (escape_mrkdwn compare.html_url) compare.total_commits
+    else sprintf "<%s|%d _commit_>" (escape_mrkdwn compare.html_url) compare.total_commits
+  in
+  let text = sprintf "%s %s:\n%s%s" repo_text total_commits_text (String.concat commits_unfurl_text) file_stats in
   let fallback = String.concat commits_unfurl_fallback in
   {
     (base_attachment repository) with
