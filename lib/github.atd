@@ -125,8 +125,8 @@ type compare = {
   permalink_url: string;
   diff_url: string;
   patch_url: string;
-  base_commit: commit;
-  merge_base_commit: commit;
+  base_commit: api_commit;
+  merge_base_commit: api_commit;
   status: string;
   ahead_by: int;
   behind_by: int;
@@ -284,8 +284,8 @@ type api_commit = {
   commit: inner_commit;
   html_url <ocaml name="url"> : string;
   author: github_user;
-  files: file list;
-  stats: api_commit_stats;
+  ~files <ocaml default="[]">: file list;
+  ~stats <ocaml default="{total=0; additions=0; deletions=0;}">: api_commit_stats;
 }
 
 type commit_comment_notification = {

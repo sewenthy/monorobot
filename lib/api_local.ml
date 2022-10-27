@@ -30,7 +30,7 @@ module Github : Api.Github = struct
     get_cache_file_f url Github_j.issue_of_string
 
   let get_compare ~ctx:_ ~(repo : Github_t.repository) ~basehead =
-    let clean_basehead = String.filter basehead ~f:(Char.equal '/') in
+    let clean_basehead = String.substr_replace_all ~pattern:"/" ~with_:"_" basehead in
     let url = Caml.Filename.concat cache_dir (sprintf "%s_compare_%s" repo.name clean_basehead) in
     get_cache_file_f url Github_j.compare_of_string
 
