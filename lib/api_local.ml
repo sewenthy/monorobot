@@ -5,12 +5,12 @@ open Printf
 
 let cwd = Caml.Sys.getcwd ()
 let cache_dir = Caml.Filename.concat cwd "github-api-cache"
-    
+
 (** return the file with a function f applied *)
 let get_cache_file_f url f =
   match get_local_file url with
   | Error e -> Lwt.return @@ fmt_error "error while getting local file: %s\nfailed to get config %s" e url
-  | Ok file -> Lwt.return @@ Ok (f file)    
+  | Ok file -> Lwt.return @@ Ok (f file)
 
 module Github : Api.Github = struct
   let get_config ~(ctx : Context.t) ~repo:_ =
@@ -42,7 +42,7 @@ module Slack_base : Api.Slack = struct
 
   let send_chat_unfurl ~ctx:_ ~channel ~ts ~unfurls () =
     let req = Slack_j.{ channel; ts; unfurls } in
-    let data = Slack_j.string_of_chat_unfurl_req req in
+    let data = req |> Slack_j.string_of_chat_unfurl_req |> Yojson.Basic.from_string |> Yojson.Basic.pretty_to_string in
     Stdio.printf "will unfurl in #%s\n" channel;
     Stdio.printf "%s\n" data;
     Lwt.return @@ Ok ()

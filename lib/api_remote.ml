@@ -76,6 +76,7 @@ module Github : Api.Github = struct
 
   let get_compare ~(ctx : Context.t) ~(repo : Github_t.repository) ~basehead =
     let%lwt res = compares_url ~repo ~basehead |> get_resource ~secrets:(Context.get_secrets_exn ctx) ~repo_url:repo.url in
+   
     Lwt.return @@ Result.map res ~f:Github_j.compare_of_string
 
   let request_reviewers ~(ctx : Context.t) ~(repo : Github_t.repository) ~number ~reviewers =
