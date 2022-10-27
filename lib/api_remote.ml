@@ -19,6 +19,9 @@ module Github : Api.Github = struct
   let compares_url ~(repo : Github_t.repository) ~basehead =
     String.substr_replace_first ~pattern:"{/basehead}" ~with_:(sprintf "/%s" basehead) repo.compare_url
 
+  let compares_url ~(repo : Github_t.repository) ~basehead =
+    String.substr_replace_first ~pattern:"{/basehead}" ~with_:(sprintf "/%s" basehead) repo.compare_url
+
   let build_headers ?token () =
     let headers = [ "Accept: application/vnd.github.v3+json" ] in
     Option.value_map token ~default:headers ~f:(fun v -> sprintf "Authorization: token %s" v :: headers)

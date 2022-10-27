@@ -87,13 +87,17 @@ let parse_exn headers body =
   | "member" | "create" | "delete" | "release" -> Event (event_notification_of_string body)
   | event -> failwith @@ sprintf "unsupported event : %s" event
 
+type basehead = string
+
 type gh_link =
   | Pull_request of repository * int
   | Issue of repository * int
   | Commit of repository * commit_hash
-  | Compare of repository * compare_branches
+  | Compare of repository * basehead
 
 let gh_link_re = Re2.create_exn {|^(.*)/(.+)/(.+)/(commit|pull|issues|compare)/([a-zA-Z0-9/.:\-_]+)/?$|}
+let commit_sha_re = Re2.create_exn {|[a-z0-9]+|}
+let compare_basehead_re = Re2.create_exn {|[a-zA-Z0-9:/\-_]+{.}[3]|[a-zA-Z0-9:/\-_]+|}
 let gh_org_team_re = Re2.create_exn {|[a-zA-Z0-9\-]+/([a-zA-Z0-9\-]+)|}
 
 (** [gh_link_of_string s] parses a URL string [s] to try to match a supported
@@ -113,9 +117,9 @@ let gh_link_of_string url_str =
   match Re2.find_submatches_exn gh_link_re path with
   | [| _; prefix; Some owner; Some name; Some link_type; Some item |] ->
     let item =
-      match String.get item (String.length item - 1) with
-      | '/' -> String.sub item ~pos:0 ~len:(String.length item - 1)
-      | _ -> item
+      match Base.String.chop_suffix_if_exists item ~suffix:"/" with
+      | Some item -> item
+      | None -> item
     in
     let base = Option.value_map prefix ~default:host ~f:(fun p -> String.concat [ host; p ]) in
     let scheme = Uri.scheme url in
@@ -135,13 +139,25 @@ let gh_link_of_string url_str =
         compare_url = sprintf "%s/compare{/basehead}" api_base;
       }
     in
+    let verify_commit_sha repo item =
+      match Re2.find_submatches_exn commit_sha_re item with
+      | [| Some item |] -> Some (Commit (repo, item))
+      | _ -> None
+    in
+    let verify_compare_basehead repo item =
+      match Re2.find_submatches_exn compare_basehead_re item with
+      | [| Some item; Some base_branch; _; Some merge_branch |] ->
+        match Github.get_branch repo base_branch
+        Some (Compare (repo, item))
+      | _ -> None
+    in
     begin
       try
         match link_type with
         | "pull" -> Some (Pull_request (repo, Int.of_string item))
         | "issues" -> Some (Issue (repo, Int.of_string item))
-        | "commit" -> Some (Commit (repo, item))
-        | "compare" -> Some (Compare (repo, item))
+        | "commit" -> verify_commit_sha repo item
+        | "compare" -> verify_compare_basehead repo item
         | _ -> None
       with _ -> None
     end

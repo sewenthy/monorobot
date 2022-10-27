@@ -9,13 +9,17 @@ let cache_dir = Caml.Filename.concat cwd "github-api-cache"
 (** return the file with a function f applied *)
 let get_cache_file_f url f =
   match get_local_file url with
-  | Error e -> Lwt.return @@ fmt_error "error while getting local file: %s\nfailed to get config %s" e url
+  | Error e -> Lwt.return @@ fmt_error "error while getting local file: %s\ncached for url: %s" e url
   | Ok file -> Lwt.return @@ Ok (f file)
 
 module Github : Api.Github = struct
   let get_config ~(ctx : Context.t) ~repo:_ =
     let url = Caml.Filename.concat cwd ctx.config_filename in
     get_cache_file_f url Config_j.config_of_string
+
+  let get_branch ~ctx:_ ~(repo : Github_t.repository) ~name =
+    let url = Caml.Filename.concat cache_dir (sprintf "%s_branch_%d" repo.name name) in
+    get_cache_file_f url Github_j.api_commit_of_string
 
   let get_api_commit ~ctx:_ ~repo:_ ~sha =
     let url = Caml.Filename.concat cache_dir sha in

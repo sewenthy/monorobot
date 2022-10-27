@@ -98,13 +98,23 @@ let cases =
       other_cases;
     ]
 
+let gh_link_output = function
+  | Some (Issue (repo, matched_re)) | Some (Pull_request (repo, matched_re)) ->
+    sprintf "matched: %d \nfor repo %s\n" matched_re
+      (repo |> Github_j.string_of_repository |> Yojson.Basic.from_string |> Yojson.Basic.pretty_to_string)
+  | Some (Commit (repo, matched_re)) | Some (Compare (repo, matched_re)) ->
+    sprintf "matched: %s \nfor repo %s\n" matched_re
+      (repo |> Github_j.string_of_repository |> Yojson.Basic.from_string |> Yojson.Basic.pretty_to_string)
+  | None -> "{None}"
+
 let () =
   List.iter cases ~f:(fun (input, expected) ->
     assert (
-      match Poly.equal (gh_link_of_string input) expected with
+      let got = gh_link_of_string input in
+      match Poly.equal got expected with
       | true -> true
       | false ->
-        Stdio.print_endline input;
+        Stdio.printf "for: %s | expected: %s but got %s" input (gh_link_output expected) (gh_link_output got);
         false
     )
   )
