@@ -1,14 +1,7 @@
 open Omd
 open Base
 
-(* https://api.slack.com/reference/surfaces/formatting#escaping *)
-let escape_mrkdwn =
-  String.concat_map ~f:(function
-    | '<' -> "&lt;"
-    | '>' -> "&gt;"
-    | '&' -> "&amp;"
-    | c -> String.make 1 c
-    )
+let escape_mrkdwn = Slack_lib.Mrkdwn.escape_mrkdwn
 
 (** Translates omd AST to a Slack mrkdwn string. Code heavily adapted
     from omd 1.3.1 source.

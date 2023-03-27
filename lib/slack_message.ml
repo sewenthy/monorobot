@@ -1,8 +1,8 @@
 open Base
 open Printf
 open Github_t
-open Slack_t
-open Mrkdwn
+open Slack_lib.Slack_t
+open Slack_lib.Mrkdwn
 
 let color_of_state ?(draft = false) ?(merged = false) state =
   match draft with
@@ -133,7 +133,8 @@ let month = function
 
 let condense_file_changes files =
   match files with
-  | [ f ] -> sprintf "_modified `%s` (+%d-%d)_" (escape_mrkdwn f.filename) f.additions f.deletions
+  | [ { filename; additions; deletions; _ } ] ->
+    sprintf "_modified `%s` (+%d-%d)_" (escape_mrkdwn filename) additions deletions
   | _ ->
     let prefix_path =
       List.map files ~f:(fun f -> f.filename)
@@ -215,7 +216,7 @@ let populate_compare repository (compare : compare) =
     let commits_unfurl = List.map compare.commits ~f:(populate_commit ~include_changes:false repository) in
     let commits_unfurl_text =
       Slack.pp_list_with_previews
-        ~pp_item:(fun (commit_unfurl : unfurl) -> Option.value commit_unfurl.text ~default:"")
+        ~pp_item:(fun (unfurl : message_attachment) -> Option.value unfurl.text ~default:"")
         commits_unfurl
     in
     let commits_unfurl_fallback =

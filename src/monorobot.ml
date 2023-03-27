@@ -2,6 +2,7 @@ open Devkit
 open Base
 open Lib
 module Arg = Caml.Arg
+module Slack = Slack_lib
 open Cmdliner
 
 let log = Log.from "monorobot"
@@ -35,10 +36,10 @@ let check_gh_action file json config secrets state =
     | Ok ctx ->
       Lwt_main.run
         ( if json then
-          let module Action = Action.Action (Api_remote.Github) (Api_local.Slack_json) in
+          let module Action = Action.Action (Api_remote.Github) (Api_local.Slack) in
           Action.process_github_notification ctx headers body
         else
-          let module Action = Action.Action (Api_remote.Github) (Api_local.Slack_simple) in
+          let module Action = Action.Action (Api_remote.Github) (Api_local.Slack) in
           Action.process_github_notification ctx headers body
         )
     )
@@ -46,18 +47,18 @@ let check_gh_action file json config secrets state =
 let check_slack_action file secrets =
   let data = Stdio.In_channel.read_all file in
   let ctx = Context.make ~secrets_filepath:secrets () in
-  match Slack_j.post_message_req_of_string data with
+  match Slack.Slack_j.post_message_req_of_string data with
   | exception exn -> log#error ~exn "unable to parse notification"
   | msg ->
   match Context.refresh_secrets ctx with
   | Error e -> log#error "%s" e
   | Ok ctx ->
     Lwt_main.run
-      ( match%lwt Api_remote.Slack.send_notification ~ctx ~msg with
+      ( match%lwt Slack.Api_remote.send_message ~ctx:ctx.slack_ctx ~msg with
       | Error e ->
-        log#error "%s" e;
+        log#error "%s" (Slack.Slack_j.string_of_slack_api_error e);
         Lwt.return_unit
-      | Ok (_res : Slack_t.post_message_res) -> Lwt.return_unit
+      | Ok (_res : Slack.Slack_t.post_message_res) -> Lwt.return_unit
       )
 
 (* flags *)
@@ -122,6 +123,7 @@ let default, info =
   Term.(ret (const (`Help (`Pager, None)))), Cmd.info "monorobot" ~doc ~version:Version.current
 
 let () =
+  let () = Lwt.async_exception_hook := fun exn -> log#error ~exn "async action terminated with exn" in
   let cmds = [ run; check_gh; check_slack ] in
   let group = Cmd.group ~default info cmds in
   Caml.exit @@ Cmd.eval group

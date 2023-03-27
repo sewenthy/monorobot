@@ -1,6 +1,5 @@
 open Base
 open Github_t
-open Slack_t
 
 module type Github = sig
   val get_config : ctx:Context.t -> repo:repository -> (Config_t.config, string) Result.t Lwt.t
@@ -18,6 +17,8 @@ module type Github = sig
 end
 
 module type Slack = sig
+  open Slack_lib.Slack_t
+
   val send_notification : ctx:Context.t -> msg:post_message_req -> post_message_res slack_response Lwt.t
   val update_notification : ctx:Context.t -> msg:update_message_req -> unit slack_response Lwt.t
 
@@ -25,7 +26,7 @@ module type Slack = sig
     :  ctx:Context.t ->
     channel:string ->
     ts:string ->
-    unfurls:message_attachment Common.StringMap.t ->
+    unfurls:(string * unfurl) list ->
     unit ->
     unit slack_response Lwt.t
 

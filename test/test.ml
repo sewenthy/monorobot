@@ -1,5 +1,6 @@
 open Base
 open Lib
+module Slack_j = Slack_lib.Slack_j
 
 let log = Devkit.Log.from "test"
 let mock_payload_dir = Caml.Filename.concat Caml.Filename.parent_dir_name "mock_payloads"
@@ -78,6 +79,7 @@ let process_slack_event ~(secrets : Config_t.secrets) path =
     | Link_shared event ->
       let%lwt _ctx = Action_local.process_link_shared_event ctx event in
       Lwt.return_unit
+    | _ -> Lwt.return_unit
   with exn ->
     log#error ~exn "failed to run slack unfurl test from %s" path;
     Caml.exit 1

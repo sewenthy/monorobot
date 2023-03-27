@@ -2,6 +2,8 @@ open Base
 open Printf
 open Devkit
 open Common
+module Slack_t = Slack_lib.Slack_t
+module Slack_j = Slack_lib.Slack_j
 
 module Github : Api.Github = struct
   let commits_url ~(repo : Github_t.repository) ~sha =
@@ -93,30 +95,6 @@ module Slack : Api.Slack = struct
   let log = Log.from "slack"
   let query_error_msg url e = sprintf "error while querying %s: %s" url e
 
-  let slack_api_request ?headers ?body meth url read =
-    match%lwt http_request ?headers ?body meth url with
-    | Error e -> Lwt.return @@ Error (query_error_msg url e)
-    | Ok s -> Lwt.return @@ Slack_j.slack_response_of_string read s
-
-  let bearer_token_header access_token = sprintf "Authorization: Bearer %s" (Uri.pct_encode access_token)
-
-  let request_token_auth ~name ?headers ?body ~ctx meth path read =
-    log#info "%s: starting request" name;
-    let secrets = Context.get_secrets_exn ctx in
-    match secrets.slack_access_token with
-    | None -> Lwt.return @@ fmt_error "%s: failed to retrieve Slack access token" name
-    | Some access_token ->
-      let headers = bearer_token_header access_token :: Option.value ~default:[] headers in
-      let url = sprintf "https://slack.com/api/%s" path in
-      ( match%lwt slack_api_request ?body ~headers meth url read with
-      | Ok res -> Lwt.return @@ Ok res
-      | Error e -> Lwt.return @@ fmt_error "%s: failure : %s" name e
-      )
-
-  let read_unit s l =
-    (* must read whole response to update lexer state *)
-    ignore (Slack_j.read_ok_res s l)
-
   let webhook_channel_request (ctx : Context.t) ~channel ~build_error read body =
     match Context.hook_of_channel ctx channel with
     | Some url ->
@@ -138,8 +116,7 @@ module Slack : Api.Slack = struct
     | Ok res -> Lwt.return_ok res
     | Error e ->
       log#warn "failed to run webhook call: %s" e;
-      request_token_auth ~name:"post message to channel" ~body ~ctx `POST "chat.postMessage"
-        Slack_j.read_post_message_res
+      Slack_lib.Api_remote.send_message ~ctx:ctx.slack_ctx ~msg
 
   (** [update_notification ctx msg] update a message at [msg.ts] in [msg.channel]
       with the payload [msg]; uses web API with access token if available, or with
@@ -156,15 +133,14 @@ module Slack : Api.Slack = struct
     | Ok (_res : Slack_t.update_message_res) -> Lwt.return_ok ()
     | Error e ->
       log#warn "failed to run webhook call: %s" e;
-      request_token_auth ~name:"update message in channel" ~body ~ctx `POST "chat.update" read_unit
+      ( match%lwt Slack_lib.Api_remote.update_message ~ctx:ctx.slack_ctx ~msg with
+      | Ok (_res : Slack_t.update_message_res) -> Lwt.return_ok ()
+      | Error e -> Lwt.return_error e
+      )
 
   let send_chat_unfurl ~(ctx : Context.t) ~channel ~ts ~unfurls () =
     let req = Slack_j.{ channel; ts; unfurls } in
-    let data = Slack_j.string_of_chat_unfurl_req req in
-    request_token_auth ~name:"unfurl slack links"
-      ~body:(`Raw ("application/json", data))
-      ~ctx `POST "chat.unfurl" read_unit
+    Slack_lib.Api_remote.send_chat_unfurl ~ctx:ctx.slack_ctx ~req
 
-  let send_auth_test ~(ctx : Context.t) () =
-    request_token_auth ~name:"retrieve bot information" ~ctx `POST "auth.test" Slack_j.read_auth_test_res
+  let send_auth_test ~(ctx : Context.t) = Slack_lib.Api_remote.send_auth_test ~ctx:ctx.slack_ctx
 end
