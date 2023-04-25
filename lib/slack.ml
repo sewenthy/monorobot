@@ -3,31 +3,15 @@ open Base
 open Common
 open Mrkdwn
 open Github_j
-open Slack_j
-
-let empty_attachments =
-  {
-    mrkdwn_in = None;
-    fallback = None;
-    color = None;
-    pretext = None;
-    author_name = None;
-    author_link = None;
-    author_icon = None;
-    title = None;
-    title_link = None;
-    text = None;
-    fields = None;
-    image_url = None;
-    thumb_url = None;
-    ts = None;
-    footer = None;
-  }
+module Slack = Slack_lib
 
 let mrkdwn_of_markdown str = String.strip @@ Mrkdwn.mrkdwn_of_markdown str
 let mrkdwn_of_markdown_opt = Option.map ~f:mrkdwn_of_markdown
 let escape = Mrkdwn.escape_mrkdwn
-let pp_link ~url text = sprintf "<%s|%s>" url (escape text)
+let pp_link ~url text = Slack_lib.Mrkdwn.link ~url ~text:(escape text) ()
+let empty_attachments = Slack.Utils.empty_attachments
+
+open Slack.Slack_t
 
 let show_labels = function
   | [] -> None
@@ -56,7 +40,14 @@ let generate_pull_request_notification_content notification =
       (pp_link ~url:html_url title) action sender.login
   in
   let attachments =
-    [ { empty_attachments with mrkdwn_in = Some [ "text" ]; color = Some "#ccc"; text = mrkdwn_of_markdown_opt body } ]
+    [
+      {
+        Slack.Utils.empty_attachments with
+        mrkdwn_in = Some [ "text" ];
+        color = Some "#ccc";
+        text = mrkdwn_of_markdown_opt body;
+      };
+    ]
   in
   attachments, summary
 
@@ -345,14 +336,15 @@ let generate_commit_comment_notification_content api_commit notification =
   attachments, summary
 
 type send_notification_mode =
-  | New_message of Slack_t.post_message_req
-  | Update_message of Slack_t.update_message_req
+  | New_message of Slack.Slack_t.post_message_req
+  | Update_message of Slack.Slack_t.update_message_req
 
 let generate_new_message (attachments, summary) channel =
-  New_message { channel; text = Some summary; attachments = Some attachments; blocks = None }
+  New_message { Slack.Utils.empty_post_msg_req with channel; text = Some summary; attachments = Some attachments }
 
 let generate_update_message (attachments, summary) ~ts channel =
-  Update_message { channel; ts; text = Some summary; attachments = Some attachments; blocks = None }
+  Update_message
+    { Slack.Utils.empty_update_msg_req with channel; ts; text = Some summary; attachments = Some attachments }
 
 let validate_signature ?(version = "v0") ?signing_key ~headers body =
   match signing_key with

@@ -1,6 +1,8 @@
 open Devkit
 open Base
 open Slack
+module Slack_t = Slack_lib.Slack_t
+module Slack_j = Slack_lib.Slack_j
 open Config_t
 open Common
 open Github_j
@@ -291,12 +293,12 @@ module Action (Github_api : Api.Github) (Slack_api : Api.Slack) = struct
       | New_message (msg : Slack_t.post_message_req) ->
         ( match%lwt Slack_api.send_notification ~ctx ~msg with
         | Ok res -> update_comment_mapping res.ts
-        | Error e -> action_error e
+        | Error e -> action_error (Slack_j.string_of_slack_api_error e)
         )
       | Update_message msg ->
         ( match%lwt Slack_api.update_notification ~ctx ~msg with
         | Ok () -> Lwt.return_unit
-        | Error e -> action_error e
+        | Error e -> action_error (Slack_j.string_of_slack_api_error e)
         )
     in
 
@@ -421,7 +423,7 @@ module Action (Github_api : Api.Github) (Slack_api : Api.Slack) = struct
         in
         Lwt.return_some user_id
       | Error msg ->
-        log#warn "failed to query slack auth.test : %s" msg;
+        log#warn "failed to query slack auth.test : %s" (Slack_j.string_of_slack_api_error msg);
         Lwt.return_none
     in
     let process link =
@@ -430,7 +432,7 @@ module Action (Github_api : Api.Github) (Slack_api : Api.Slack) = struct
         =
         match api_result with
         | Error _ -> Lwt.return_none
-        | Ok item -> Lwt.return_some @@ (link, populate repo item)
+        | Ok item -> Lwt.return_some @@ (link, Slack_t.Message_attachment (populate repo item))
       in
       match Github.gh_link_of_string link with
       | None -> Lwt.return_none
@@ -459,27 +461,37 @@ module Action (Github_api : Api.Github) (Slack_api : Api.Slack) = struct
       Lwt.return "ignored: is bot user"
     else begin
       let links = List.map event.links ~f:(fun l -> l.url) in
-      let%lwt unfurls = List.map links ~f:process |> Lwt.all |> Lwt.map List.filter_opt |> Lwt.map StringMap.of_list in
-      if Map.is_empty unfurls then Lwt.return "ignored: no links to unfurl"
+      let%lwt unfurls = List.map links ~f:process |> Lwt.all |> Lwt.map List.filter_opt in
+      if List.length unfurls = 0 then Lwt.return "ignored: no links to unfurl"
       else begin
         match%lwt Slack_api.send_chat_unfurl ~ctx ~channel:event.channel ~ts:event.message_ts ~unfurls () with
         | Ok () -> Lwt.return "ok"
         | Error e ->
-          log#error "%s" e;
+          log#error "%s" (Slack_j.string_of_slack_api_error e);
           Lwt.return "ignored: failed to unfurl links"
       end
     end
 
   let process_slack_event (ctx : Context.t) headers body =
-    let secrets = Context.get_secrets_exn ctx in
-    match Slack_j.event_notification_of_string body with
-    | Url_verification payload -> Lwt.return payload.challenge
-    | Event_callback notification ->
-    match Slack.validate_signature ?signing_key:secrets.slack_signing_secret ~headers body with
-    | Error e -> action_error e
-    | Ok () ->
-    match notification.event with
-    | Link_shared event -> process_link_shared_event ctx event
+    let event_handler = function
+      | Slack_t.Link_shared event ->
+        Lwt.async (fun () ->
+          try%lwt
+            let%lwt (_result : string) = process_link_shared_event ctx event in
+            Lwt.return_unit
+          with exn ->
+            log#error ~exn "fatal error while handling request: %s" body;
+            Lwt.return_unit
+        );
+        log#debug "OK-ed Slack";
+        Lwt.return_ok ""
+      | _ -> Lwt.return_ok ""
+    in
+    match%lwt Slack_lib.Utils.process_slack_event ctx.slack_ctx headers body ~event_handler with
+    | Ok res -> Lwt.return res
+    | Error e ->
+      log#error "errored: %s, while processing: %s" e body;
+      Lwt.return ""
 
   (** debugging endpoint to return current in-memory repo config *)
   let print_config (ctx : Context.t) repo_url =

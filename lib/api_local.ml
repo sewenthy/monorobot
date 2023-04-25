@@ -2,7 +2,12 @@ open Base
 open Common
 open Devkit
 open Printf
+module Slack_j = Slack_lib.Slack_j
+module Slack_t = Slack_lib.Slack_t
 
+exception Test_setup_failure of string
+
+let test_setup_failure fmt = ksprintf (fun msg -> raise (Test_setup_failure msg)) fmt
 let cwd = Caml.Sys.getcwd ()
 let cache_dir = Caml.Filename.concat cwd "github-api-cache"
 
@@ -52,10 +57,10 @@ end
 
 (** The base implementation for local check payload debugging and mocking tests *)
 module Slack_base : Api.Slack = struct
-  let send_notification ~ctx:_ ~msg:_ = Lwt.return @@ Error "undefined for local setup"
-  let update_notification ~ctx:_ ~msg:_ = Lwt.return @@ Error "undefined for local setup"
-  let send_chat_unfurl ~ctx:_ ~channel:_ ~ts:_ ~unfurls:_ () = Lwt.return @@ Error "undefined for local setup"
-  let send_auth_test ~ctx:_ () = Lwt.return @@ Error "undefined for local setup"
+  let send_notification ~ctx:_ ~msg:_ = test_setup_failure "undefined for local setup"
+  let update_notification ~ctx:_ ~msg:_ = test_setup_failure "undefined for local setup"
+  let send_chat_unfurl ~ctx:_ ~channel:_ ~ts:_ ~unfurls:_ () = test_setup_failure "undefined for local setup"
+  let send_auth_test ~ctx:_ () = test_setup_failure "undefined for local setup"
 end
 
 (** Module for mocking test requests to slack--will output on Stdio *)
@@ -110,11 +115,9 @@ module Slack_simple : Api.Slack = struct
       );
     Lwt.return @@ Ok ()
 
-  let send_chat_unfurl ~ctx:_ ~channel ~ts:_ ~(unfurls : Slack_t.message_attachment Common.StringMap.t) () =
-    Stdio.printf "will unfurl in #%s\n" channel;
-    let unfurl_text = List.map (StringMap.to_list unfurls) ~f:(fun (_, unfurl) -> unfurl.text) in
-    Stdio.printf "%s\n" (String.concat ~sep:"\n" (List.filter_opt unfurl_text));
-    Lwt.return @@ Ok ()
+  let send_chat_unfurl ~(ctx : Context.t) ~channel ~ts ~(unfurls : (string * Slack_t.unfurl) list) () =
+    let req = Slack_j.{ channel; ts; unfurls } in
+    Slack_lib.Api_local.send_chat_unfurl ~ctx:ctx.slack_ctx ~req
 
   let send_auth_test ~ctx:_ () =
     Lwt.return
@@ -145,13 +148,9 @@ module Slack_json : Api.Slack = struct
     log#info "%s" json;
     Lwt.return @@ Ok ()
 
-  let send_chat_unfurl ~ctx:_ ~channel ~ts:_ ~(unfurls : Slack_t.message_attachment Common.StringMap.t) () =
-    log#info "will notify %s" channel;
-    let json = List.map (StringMap.to_list unfurls) ~f:(fun (_, unfurl) -> Slack_j.string_of_unfurl unfurl) in
-    let url = Uri.of_string "https://slack.com/api/chat.unfurl" in
-    log#info "%s" (Uri.to_string url);
-    log#info "%s" (String.concat ~sep:";\n" json);
-    Lwt.return @@ Ok ()
+  let send_chat_unfurl ~(ctx : Context.t) ~channel ~ts ~(unfurls : (string * Slack_t.unfurl) list) () =
+    let req = Slack_j.{ channel; ts; unfurls } in
+    Slack_lib.Api_local.send_chat_unfurl ~ctx:ctx.slack_ctx ~req
 
   let send_auth_test ~ctx:_ () =
     Lwt.return

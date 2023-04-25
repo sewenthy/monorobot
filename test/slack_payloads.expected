@@ -174,6 +174,7 @@ will notify #frontend-bot
 will update msg in #a1-bot
 {
   "channel": "a1-bot",
+  "ts": "1.00",
   "text": "<https://github.com/xinyuluo/monorepo|[xinyuluo/monorepo]> *xinyuluo* <https://github.com/xinyuluo/monorepo/pull/4#issuecomment-633344369|commented> on #4 <https://github.com/xinyuluo/monorepo/pull/4|README update>",
   "attachments": [
     {
@@ -182,12 +183,12 @@ will update msg in #a1-bot
       "color": "#ccc",
       "text": "issue comment edited test"
     }
-  ],
-  "ts": "1.00"
+  ]
 }
 will update msg in #backend
 {
   "channel": "backend",
+  "ts": "1.00",
   "text": "<https://github.com/xinyuluo/monorepo|[xinyuluo/monorepo]> *xinyuluo* <https://github.com/xinyuluo/monorepo/pull/4#issuecomment-633344369|commented> on #4 <https://github.com/xinyuluo/monorepo/pull/4|README update>",
   "attachments": [
     {
@@ -196,8 +197,7 @@ will update msg in #backend
       "color": "#ccc",
       "text": "issue comment edited test"
     }
-  ],
-  "ts": "1.00"
+  ]
 }
 ===== file ../mock_payloads/issues.closed.json =====
 will notify #backend
@@ -338,6 +338,7 @@ will notify #frontend-bot
 will update msg in #a1-bot
 {
   "channel": "a1-bot",
+  "ts": "2.00",
   "text": "<https://github.com/xinyuluo/monorepo|[xinyuluo/monorepo]> *xinyuluo* <https://github.com/xinyuluo/monorepo/pull/4#pullrequestreview-0|commented on> #4 <https://github.com/xinyuluo/monorepo/pull/4|README update>",
   "attachments": [
     {
@@ -346,12 +347,12 @@ will update msg in #a1-bot
       "color": "#ccc",
       "text": "pr review comment test"
     }
-  ],
-  "ts": "2.00"
+  ]
 }
 will update msg in #backend
 {
   "channel": "backend",
+  "ts": "2.00",
   "text": "<https://github.com/xinyuluo/monorepo|[xinyuluo/monorepo]> *xinyuluo* <https://github.com/xinyuluo/monorepo/pull/4#pullrequestreview-0|commented on> #4 <https://github.com/xinyuluo/monorepo/pull/4|README update>",
   "attachments": [
     {
@@ -360,8 +361,7 @@ will update msg in #backend
       "color": "#ccc",
       "text": "pr review comment test"
     }
-  ],
-  "ts": "2.00"
+  ]
 }
 ===== file ../mock_payloads/pull_request_review.request_changes.json =====
 will notify #default
@@ -413,6 +413,7 @@ will notify #backend
 will update msg in #a1-bot
 {
   "channel": "a1-bot",
+  "ts": "1.00",
   "text": "<https://github.com/xinyuluo/monorepo|[xinyuluo/monorepo]> *xinyuluo* commented on #4 <https://github.com/xinyuluo/monorepo/pull/4|README update>",
   "attachments": [
     {
@@ -422,12 +423,12 @@ will update msg in #a1-bot
       "text": "Edited test comment",
       "footer": "New comment by xinyuluo in <https://github.com/xinyuluo/monorepo/pull/4#discussion_r0|README.md>"
     }
-  ],
-  "ts": "1.00"
+  ]
 }
 will update msg in #backend
 {
   "channel": "backend",
+  "ts": "1.00",
   "text": "<https://github.com/xinyuluo/monorepo|[xinyuluo/monorepo]> *xinyuluo* commented on #4 <https://github.com/xinyuluo/monorepo/pull/4|README update>",
   "attachments": [
     {
@@ -437,8 +438,7 @@ will update msg in #backend
       "text": "Edited test comment",
       "footer": "New comment by xinyuluo in <https://github.com/xinyuluo/monorepo/pull/4#discussion_r0|README.md>"
     }
-  ],
-  "ts": "1.00"
+  ]
 }
 ===== file ../mock_payloads/push.branch_filter_default.json =====
 will notify #all-push-events

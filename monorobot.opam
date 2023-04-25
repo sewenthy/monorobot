@@ -27,9 +27,11 @@ depends: [
  "lwt_ppx" {>= "2.0.0"}
  "nocrypto"
  "re2"
+ "slack"
  "stdio"
  "uri"
  "omd" {< "2"}
  "yojson"
 ]
+
 build: ["dune" "build" "-p" name "-j" jobs]

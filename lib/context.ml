@@ -13,19 +13,21 @@ type t = {
   mutable secrets : Config_t.secrets option;
   config : Config_t.config Stringtbl.t;
   state : State.t;
+  slack_ctx : Slack_lib.Context.t;
 }
 
 let default_config_filename = "monorobot.json"
 let default_secrets_filepath = "secrets.json"
 
-let make ?config_filename ?secrets_filepath ?state_filepath () =
+let make ?(config_filename = default_config_filename) ?(secrets_filepath = default_secrets_filepath) ?state_filepath () =
   {
-    config_filename = Option.value config_filename ~default:default_config_filename;
-    secrets_filepath = Option.value secrets_filepath ~default:default_secrets_filepath;
+    config_filename;
+    secrets_filepath;
     state_filepath;
     secrets = None;
     config = Stringtbl.empty ();
     state = State.empty ();
+    slack_ctx = Slack_lib.Context.get_ctx ~secrets_path:secrets_filepath ~ua:"monorobot" ();
   }
 
 let get_secrets_exn ctx =
